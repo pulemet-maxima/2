@@ -201,7 +201,8 @@
     }
   }
 
-  canvas.addEventListener('touchstart', (e) => {
+  document.addEventListener('touchstart', (e) => {
+    if (e.target.id === 'sound-btn') return;
     e.preventDefault();
     jump();
   }, { passive: false });
