@@ -1,234 +1,171 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MAX Dino Runner</title>
-  <!-- Подключаем SDK для Mini App мессенджера MAX -->
-  <script src="https://max.ru"></script>
-  <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #f7f7f7;
-      font-family: 'Courier New', Courier, monospace;
-      overflow: hidden;
-    }
-    #game-container {
-      width: 100%;
-      max-width: 600px;
-      padding: 10px;
-      text-align: center;
-    }
-    canvas {
-      width: 100%;
-      background: #ffffff;
-      border-bottom: 2px solid #535353;
-      display: block;
-    }
-    .info {
-      display: flex;
-      justify-content: space-between;
-      color: #535353;
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
-    .hint {
-      margin-top: 12px;
-      color: #757575;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
+'#263238';
+    ctx.fillRect(x + 18, y + 10, 14, 18);
 
-<div id="game-container">
-  <div class="info">
-    <span id="player-name">Игрок</span>
-    <span>РЕКОРД: <span id="high-score">0</span> | СЧЁТ: <span id="score">0</span></span>
-  </div>
-  <canvas id="gameCanvas" width="600" height="200"></canvas>
-  <div class="hint">Нажмите на экран или Пробел, чтобы прыгнуть</div>
-</div>
+    ctx.strokeStyle = '#263238';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x + 28, y + 14);
+    ctx.lineTo(x + 42, y + 17);
+    ctx.stroke();
 
-<script>
-  // Инициализация MAX Mini App (если открыто внутри мессенджера)
-  if (window.WebApp) {
-    window.WebApp.ready();
-    const user = window.WebApp.initDataUnsafe?.user;
-    if (user && user.first_name) {
-      document.getElementById('player-name').textContent = user.first_name;
-    }
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(x + 26, y + 5, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#81d4fa';
+    ctx.fillRect(x + 28, y + 2, 5, 4);
+
+    ctx.fillStyle = '#1a237e';
+    ctx.fillRect(x + 22, y + 25, 6, 12);
+
+    ctx.fillStyle = '#33691e';
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 32);
+    ctx.lineTo(x + 24, y + 22);
+    ctx.lineTo(x + 44, y + 22);
+    ctx.lineTo(x + 48, y + 34);
+    ctx.fill();
+
+    ctx.fillStyle = '#558b2f';
+    ctx.beginPath();
+    ctx.moveTo(x + 14, y + 34);
+    ctx.lineTo(x + 18, y + 25);
+    ctx.lineTo(x + 48, y + 27);
+    ctx.lineTo(x + 54, y + 34);
+    ctx.fill();
+
+    ctx.strokeStyle = '#b3e5fc';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 36, y + 26);
+    ctx.lineTo(x + 33, y + 19);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#90a4ae';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + 42, y + 16);
+    ctx.lineTo(x + 52, y + 36);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff59d';
+    ctx.beginPath();
+    ctx.arc(x + 53, y + 21, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#b0bec5';
+    ctx.fillRect(x + 4, y + 35, 22, 3);
+
+    drawWheel(x + 12, y + 37, 9);
+    drawWheel(x + 52, y + 37, 9);
   }
 
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  const scoreEl = document.getElementById('score');
-  const highScoreEl = document.getElementById('high-score');
+  function drawTrafficLight(obs) {
+    const cx = obs.x + obs.width / 2;
 
-  let score = 0;
-  let highScore = localStorage.getItem('maxDinoHighScore') || 0;
-  highScoreEl.textContent = highScore;
+    ctx.fillStyle = '#78909c';
+    ctx.fillRect(cx - 2.5, obs.y + 24, 5, obs.height - 24);
 
-  let gameSpeed = 5;
-  let isGameOver = false;
-  let animationId;
+    ctx.fillStyle = '#455a64';
+    ctx.fillRect(cx - 7, obs.y + obs.height - 4, 14, 4);
 
-  // Параметры динозавра
-  const dino = {
-    x: 40,
-    y: 150,
-    width: 30,
-    height: 40,
-    dy: 0,
-    jumpForce: 11,
-    gravity: 0.55,
-    grounded: true
-  };
+    ctx.fillStyle = '#212121';
+    ctx.fillRect(cx - 8, obs.y, 16, 34);
 
-  // Массив препятствий (кактусов)
-  let obstacles = [];
-  let spawnTimer = 0;
-
-  function jump() {
-    if (isGameOver) {
-      resetGame();
-      return;
+    const colors = ['#ff1744', '#ffea00', '#00e676'];
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = colors[i];
+      ctx.beginPath();
+      ctx.arc(cx, obs.y + 6 + i * 11, 3.2, 0, Math.PI * 2);
+      ctx.fill();
     }
-    if (dino.grounded) {
-      dino.dy = -dino.jumpForce;
-      dino.grounded = false;
-    }
-  }
-
-  // Управление: тап по экрану или клавиатура
-  window.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    jump();
-  }, { passive: false });
-  window.addEventListener('mousedown', jump);
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' || e.code === 'ArrowUp') {
-      jump();
-    }
-  });
-
-  function spawnObstacle() {
-    const height = Math.random() > 0.5 ? 35 : 22;
-    const width = Math.random() > 0.5 ? 20 : 15;
-    obstacles.push({
-      x: canvas.width,
-      y: canvas.height - height - 10,
-      width: width,
-      height: height
-    });
-  }
-
-  function resetGame() {
-    score = 0;
-    gameSpeed = 5;
-    obstacles = [];
-    dino.y = 150;
-    dino.dy = 0;
-    isGameOver = false;
-    update();
-  }
-
-  function drawDino() {
-    ctx.fillStyle = '#535353';
-    // Тело
-    ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
-    // Глаз
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(dino.x + 20, dino.y + 6, 4, 4);
-  }
-
-  function drawObstacles() {
-    ctx.fillStyle = '#2e7d32';
-    obstacles.forEach(obs => {
-      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-    });
   }
 
   function update() {
     if (isGameOver) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Физика прыжка
-    dino.y += dino.dy;
-    if (dino.y + dino.height < canvas.height - 10) {
-      dino.dy += dino.gravity;
-      dino.grounded = false;
-    } else {
-      dino.y = canvas.height - dino.height - 10;
-      dino.dy = 0;
-      dino.grounded = true;
+    roadOffset = (roadOffset + gameSpeed) % 45;
+    if (moto.grounded) {
+      wheelAngle += gameSpeed * 0.06;
     }
 
-    // Генерация кактусов
+    clouds.forEach(c => {
+      c.x -= gameSpeed * 0.25;
+      if (c.x < -60) c.x = canvas.width + 40;
+    });
+
+    moto.y += moto.dy;
+    if (moto.y + moto.height < groundY) {
+      moto.dy += moto.gravity;
+      moto.grounded = false;
+    } else {
+      moto.y = groundY - moto.height;
+      moto.dy = 0;
+      moto.grounded = true;
+    }
+
     spawnTimer--;
     if (spawnTimer <= 0) {
       spawnObstacle();
-      spawnTimer = Math.floor(Math.random() * 60) + 65;
+      spawnTimer = Math.floor(Math.random() * 55) + 60;
     }
 
-    // Движение и проверка столкновений
+    drawBackground();
+    drawUralMoto();
+
     for (let i = obstacles.length - 1; i >= 0; i--) {
       let obs = obstacles[i];
       obs.x -= gameSpeed;
 
-      // Проверка столкновения
+      drawTrafficLight(obs);
+
       if (
-        dino.x < obs.x + obs.width &&
-        dino.x + dino.width > obs.x &&
-        dino.y < obs.y + obs.height &&
-        dino.y + dino.height > obs.y
+        moto.x + 8 < obs.x + obs.width - 3 &&
+        moto.x + moto.width - 8 > obs.x + 3 &&
+        moto.y + 6 < obs.y + obs.height &&
+        moto.y + moto.height > obs.y + 4
       ) {
         isGameOver = true;
+        playSound('crash');
         if (score > highScore) {
           highScore = score;
-          localStorage.setItem('maxDinoHighScore', highScore);
+          try {
+            localStorage.setItem('maxUralHighScore', highScore);
+          } catch (e) {}
           highScoreEl.textContent = highScore;
         }
         drawGameOver();
         return;
       }
 
-      if (obs.x + obs.width < 0) {
+      if (obs.x + obs.width < -10) {
         obstacles.splice(i, 1);
         score++;
         scoreEl.textContent = score;
-        if (score % 5 === 0) gameSpeed += 0.3; // Ускорение игры
+        if (score % 10 === 0) {
+          playSound('score');
+          gameSpeed += 0.4;
+        }
+        if (score % 15 === 0) {
+          isNight = !isNight;
+        }
       }
     }
 
-    drawDino();
-    drawObstacles();
-
-    animationId = requestAnimationFrame(update);
+    requestAnimationFrame(update);
   }
 
   function drawGameOver() {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#535353';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('ИГРА ОКОНЧЕНА', canvas.width / 2, 90);
+    ctx.fillText('АВАРИЯ НА ПЕРЕКРЁСТКЕ!', canvas.width / 2, 95);
     ctx.font = '16px Courier New';
-    ctx.fillText('Нажмите, чтобы начать заново', canvas.width / 2, 120);
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillText('Нажмите на экран или Пробел, чтобы поехать снова', canvas.width / 2, 130);
   }
 
   update();
