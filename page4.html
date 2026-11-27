@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Рогатка — Мини-игра</title>
+<style>
+*{box-sizing:border-box;user-select:none;-webkit-user-select:none}
+html,body{margin:0;padding:0;width:100%;height:100dvh;overflow:hidden;touch-action:none;background:#0f172a;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center}
+.header{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:440px;padding:12px 16px;font-weight:600;font-size:1rem}
+.back-link{color:#94a3b8;text-decoration:none;font-size:.95rem}
+.snd-btn{background:#1e293b;border:1px solid #334155;color:#f8fafc;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:.9rem}
+.canvas-wrap{position:relative;border-radius:16px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.5);border:2px solid #1e293b;width:94vw;max-width:440px}
+canvas{display:block;width:100%;height:auto;background:linear-gradient(180deg,#090d16 0%,#1e1b4b 100%)}
+.overlay{position:absolute;inset:0;background:rgba(15,23,42,.88);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:2}
+.hidden{display:none!important}
+h1{margin:0 0 8px;font-size:1.7rem;color:#facc15}
+p{margin:0 0 18px;color:#cbd5e1;font-size:.95rem;line-height:1.4}
+.btn{padding:13px 28px;font-size:1.05rem;font-weight:700;color:#0f172a;background:#facc15;border:none;border-radius:12px;cursor:pointer}
+.hint{margin-top:12px;color:#64748b;font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="header">
+<a href="index.html" class="back-link">← Назад</a>
+<div>Уровень: <span id="lvl">1</span> | Снаряды: <span id="ammo">3</span></div>
+<button id="sndBtn" class="snd-btn">🔊</button>
+</div>
+<div class="canvas-wrap">
+<canvas id="game" width="440" height="520"></canvas>
+<div id="startScreen" class="overlay">
+<h1>🎯 Космическая рогатка</h1>
+<p>Оттяни шар назад и отпусти, чтобы сбить всех пришельцев!</p>
+<button id="startBtn" class="btn">Играть</button>
+</div>
+<div id="endScreen" class="overlay hidden">
+<h1 id="endTitle">Уровень пройден!</h1>
+<p id="endText">Отличный выстрел!</p>
+<button id="nextBtn" class="btn">Дальше</button>
+</div>
+</div>
+<div class="hint">Потяни снаряд на рогатке назад для прицеливания</div>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),lvlEl=document.getElementById('lvl'),ammoEl=document.getElementById('ammo'),startScreen=document.getElementById('startScreen'),endScreen=document.getElementById('endScreen'),endTitle=document.getElementById('endTitle'),endText=document.getElementById('endText'),sndBtn=document.getElementById('sndBtn');
+const anchor={x:95,y:370},groundY=470,maxPull=85;
+let level=1,ammo=3,soundOn=true,dragging=false,flying=false,settledTimer=0;
+let ball={x:anchor.x,y:anchor.y,vx:0,vy:0,r:14};
+let blocks=[],enemies=[],particles=[];
+
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let actx=null;
+function playSound(type){
+    if(!soundOn)return;
+    if(!actx)actx=new AudioCtx();
+    if(actx.state==='suspended')actx.resume();
+    const o=actx.createOscillator(),g=actx.createGain(),now=actx.currentTime;
+    o.connect(g);g.connect(actx.destination);
+    if(type==='shoot'){
+        o.type='triangle';o.frequency.setValueAtTime(180,now);o.frequency.exponentialRampToValueAtTime(520,now+0.18);
+        g.gain.setValueAtTime(0.25,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);
+        o.start(now);o.stop(now+0.2);
+    }else if(type==='hit'){
+        o.type='square';o.frequency.setValueAtTime(140,now);o.frequency.exponentialRampToValueAtTime(55,now+0.12);
+        g.gain.setValueAtTime(0.18,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.13);
+        o.start(now);o.stop(now+0.13);
+    }else if(type==='enemy'){
+        o.type='sawtooth';o.frequency.setValueAtTime(420,now);o.frequency.exponentialRampToValueAtTime(90,now+0.25);
+        g.gain.setValueAtTime(0.25,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.26);
+        o.start(now);o.stop(now+0.26);
+    }else if(type==='win'){
+        o.type='sine';o.frequency.setValueAtTime(330,now);o.frequency.setValueAtTime(440,now+0.1);o.frequency.setValueAtTime(660,now+0.2);
+        g.gain.setValueAtTime(0.22,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.4);
+        o.start(now);o.stop(now+0.4);
+    }else if(type==='lose'){
+        o.type='sawtooth';o.frequency.setValueAtTime(220,now);o.frequency.linearRampToValueAtTime(95,now+0.35);
+        g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.36);
+        o.start(now);o.stop(now+0.36);
+    }
+}
+
+function boom(x,y,color){
+    for(let i=0;i<14;i++){
+        const a=Math.random()*Math.PI*2,sp=1+Math.random()*4;
+        particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:28,color});
+    }
+}
+
+function buildLevel(n){
+    blocks=[];enemies=[];particles=[];
+    ammo=3+Math.floor(n/3);
+    lvlEl.textContent=n;ammoEl.textContent=ammo;
+    const baseX=260;
+    if(n%3===1){
+        blocks.push({x:baseX,y:groundY-80,w:18,h:80,hp:2});
+        blocks.push({x:baseX+85,y:groundY-80,w:18,h:80,hp:2});
+        blocks.push({x:baseX-6,y:groundY-98,w:115,h:18,hp:2});
+        enemies.push({x:baseX+51,y:groundY-16,r:15,alive:true});
+        if(n>1)enemies.push({x:baseX+51,y:groundY-114,r:15,alive:true});
+    }else if(n%3===2){
+        blocks.push({x:baseX-15,y:groundY-70,w:18,h:70,hp:2});
+        blocks.push({x:baseX+45,y:groundY-70,w:18,h:70,hp:2});
+        blocks.push({x:baseX+105,y:groundY-70,w:18,h:70,hp:2});
+        blocks.push({x:baseX-20,y:groundY-88,w:148,h:18,hp:2});
+        enemies.push({x:baseX+24,y:groundY-16,r:15,alive:true});
+        enemies.push({x:baseX+84,y:groundY-16,r:15,alive:true});
+    }else{
+        blocks.push({x:baseX,y:groundY-90,w:20,h:90,hp:2});
+        blocks.push({x:baseX+90,y:groundY-90,w:20,h:90,hp:2});
+        blocks.push({x:baseX-5,y:groundY-108,w:120,h:18,hp:2});
+        blocks.push({x:baseX+20,y:groundY-168,w:18,h:60,hp:2});
+        blocks.push({x:baseX+72,y:groundY-168,w:18,h:60,hp:2});
+        blocks.push({x:baseX+15,y:groundY-184,w:80,h:16,hp:2});
+        enemies.push({x:baseX+55,y:groundY-16,r:15,alive:true});
+        enemies.push({x:baseX+55,y:groundY-124,r:15,alive:true});
+    }
+    resetBall();
+}
+
+function resetBall(){
+    ball={x:anchor.x,y:anchor.y,vx:0,vy:0,r:14};
+    flying=false;dragging=false;settledTimer=0;
+}
+
+function update(){
+    particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life--});
+    particles=particles.filter(p=>p.life>0);
+    if(!flying)return;
+    ball.vy+=0.34;ball.vx*=0.994;ball.x+=ball.vx;ball.y+=ball.vy;
+    if(ball.y+ball.r>groundY){
+        ball.y=groundY-ball.r;ball.vy*=-0.52;ball.vx*=0.82;
+        if(Math.abs(ball.vy)>2)playSound('hit');
+    }
+    if(ball.x-ball.r<0){ball.x=ball.r;ball.vx*=-0.6}
+    if(ball.x+ball.r>canvas.width){ball.x=canvas.width-ball.r;ball.vx*=-0.6}
+
+    for(let i=blocks.length-1;i>=0;i--){
+        const b=blocks.at(i);
+        const cx=Math.max(b.x,Math.min(ball.x,b.x+b.w));
+        const cy=Math.max(b.y,Math.min(ball.y,b.y+b.h));
+        const dx=ball.x-cx,dy=ball.y-cy;
+        if(dx*dx+dy*dy<ball.r*ball.r){
+            playSound('hit');boom(cx,cy,'#38bdf8');b.hp--;
+            if(Math.abs(dx)>Math.abs(dy))ball.vx*=-0.65;else ball.vy*=-0.65;
+            if(b.hp<=0){
+                blocks.splice(i,1);
+                enemies.forEach(e=>{if(e.alive&&e.y<groundY-20)e.falling=true});
+            }
+        }
+    }
+
+    enemies.forEach(e=>{
+        if(e.alive&&e.falling){
+            e.y+=6;
+            if(e.y>=groundY-e.r){
+                e.y=groundY-e.r;e.alive=false;
+                playSound('enemy');boom(e.x,e.y,'#4ade80');
+            }
+        }
+        if(!e.alive)return;
+        const dx=ball.x-e.x,dy=ball.y-e.y;
+        if(dx*dx+dy*dy<(ball.r+e.r)*(ball.r+e.r)){
+            e.alive=false;ball.vx*=0.7;ball.vy*=0.7;
+            playSound('enemy');boom(e.x,e.y,'#4ade80');
+        }
+    });
+
+    if(Math.hypot(ball.vx,ball.vy)<0.6)settledTimer++;else settledTimer=0;
+    if(settledTimer>45){
+        const left=enemies.filter(e=>e.alive).length;
+        if(left===0){
+            flying=false;playSound('win');
+            endTitle.textContent='Уровень '+level+' пройден!';endTitle.style.color='#facc15';
+            endText.textContent='Все цели уничтожены!';
+            document.getElementById('nextBtn').textContent='Следующий уровень';
+            document.getElementById('nextBtn').dataset.win='1';
+            endScreen.classList.remove('hidden');
+        }else if(ammo>0){resetBall()}else{
+            flying=false;playSound('lose');
+            endTitle.textContent='Снаряды кончились!';endTitle.style.color='#f87171';
+            endText.textContent='Попробуйте ещё раз.';
+            document.getElementById('nextBtn').textContent='Повторить';
+            document.getElementById('nextBtn').dataset.win='0';
+            endScreen.classList.remove('hidden');
+        }
+    }
+}
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#1e293b';ctx.fillRect(0,groundY,canvas.width,canvas.height-groundY);
+    ctx.fillStyle='#334155';ctx.fillRect(0,groundY,canvas.width,3);
+    ctx.strokeStyle='#64748b';ctx.lineWidth=6;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(anchor.x,groundY);ctx.lineTo(anchor.x,anchor.y+15);ctx.lineTo(anchor.x-10,anchor.y-10);ctx.stroke();
+
+    if(dragging){
+        const vx=(anchor.x-ball.x)*0.23,vy=(anchor.y-ball.y)*0.23;
+        ctx.fillStyle='rgba(250,204,21,0.55)';
+        for(let t=2;t<26;t+=3){
+            const px=ball.x+vx*t,py=ball.y+vy*t+0.5*0.34*t*t;
+            if(py>groundY)break;
+            ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+        }
+    }
+
+    if(!flying){
+        ctx.strokeStyle='#facc15';ctx.lineWidth=3;
+        ctx.beginPath();ctx.moveTo(anchor.x-10,anchor.y-10);ctx.lineTo(ball.x,ball.y);ctx.lineTo(anchor.x+10,anchor.y-8);ctx.stroke();
+    }
+    ctx.fillStyle='#facc15';ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(anchor.x,anchor.y+15);ctx.lineTo(anchor.x+10,anchor.y-8);ctx.stroke();
+
+    blocks.forEach(b=>{ctx.fillStyle=b.hp>1?'#0284c7':'#38bdf8';ctx.beginPath();ctx.roundRect(b.x,b.y,b.w,b.h,4);ctx.fill()});
+    enemies.forEach(e=>{
+        if(!e.alive)return;
+        ctx.fillStyle='#4ade80';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(e.x-5,e.y-3,2.5,0,Math.PI*2);ctx.arc(e.x+5,e.y-3,2.5,0,Math.PI*2);ctx.fill();
+    });
+    particles.forEach(p=>{ctx.fillStyle=p.color;ctx.globalAlpha=p.life/28;ctx.fillRect(p.x,p.y,4,4);ctx.globalAlpha=1});
+}
+
+function loop(){update();draw();requestAnimationFrame(loop)}
+
+function getPos(e){
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width,scaleY=canvas.height/rect.height;
+    const pt=e.touches?e.touches.item(0):e;
+    return{x:(pt.clientX-rect.left)*scaleX,y:(pt.clientY-rect.top)*scaleY};
+}
+function onDown(e){
+    if(flying||!startScreen.classList.contains('hidden')||!endScreen.classList.contains('hidden'))return;
+    const p=getPos(e);
+    if(Math.hypot(p.x-ball.x,p.y-ball.y)<65)dragging=true;
+}
+function onMove(e){
+    if(!dragging)return;
+    const p=getPos(e);
+    const dx=p.x-anchor.x,dy=p.y-anchor.y,dist=Math.hypot(dx,dy);
+    if(dist>maxPull){ball.x=anchor.x+(dx/dist)*maxPull;ball.y=anchor.y+(dy/dist)*maxPull}else{ball.x=p.x;ball.y=p.y}
+}
+function onUp(){
+    if(!dragging)return;
+    dragging=false;
+    const dx=anchor.x-ball.x,dy=anchor.y-ball.y;
+    if(Math.hypot(dx,dy)<15){resetBall();return}
+    ball.vx=dx*0.23;ball.vy=dy*0.23;
+    flying=true;ammo--;ammoEl.textContent=ammo;
+    playSound('shoot');
+}
+
+canvas.addEventListener('mousedown',onDown);window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
+canvas.addEventListener('touchstart',onDown,{passive:true});window.addEventListener('touchmove',onMove,{passive:true});window.addEventListener('touchend',onUp,{passive:true});
+sndBtn.addEventListener('click',()=>{soundOn=!soundOn;sndBtn.textContent=soundOn?'🔊':'🔇'});
+document.getElementById('startBtn').addEventListener('click',()=>{startScreen.classList.add('hidden');buildLevel(level)});
+document.getElementById('nextBtn').addEventListener('click',e=>{endScreen.classList.add('hidden');if(e.target.dataset.win==='1')level++;buildLevel(level)});
+buildLevel(1);loop();
+</script>
+</body>
+</html>
