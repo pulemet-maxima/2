@@ -1,267 +1,144 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ловец звёзд — Мини-игра</title>
-    <style>
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
-        body {
-            margin: 0;
-            background: #0f172a;
-            color: #f8fafc;
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding-top: 12px;
-            padding-bottom: 90px;
-            min-height: 100dvh;
-            overflow: hidden;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            max-width: 420px;
-            padding: 8px 16px 12px;
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-        .back-link {
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 0.95rem;
-            transition: color 0.2s;
-        }
-        .back-link:hover { color: #fff; }
-        .canvas-wrap {
-            position: relative;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            border: 2px solid #1e293b;
-            max-width: 94vw;
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            max-width: 380px;
-            max-height: 68dvh;
-            background: linear-gradient(180deg, #090d16 0%, #1e1b4b 100%);
-            touch-action: none;
-        }
-        .overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(4px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px;
-        }
-        .hidden { display: none !important; }
-        h1 { margin: 0 0 8px; font-size: 1.8rem; color: #facc15; }
-        p { margin: 0 0 20px; color: #cbd5e1; line-height: 1.4; }
-        button {
-            padding: 14px 32px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #0f172a;
-            background: #facc15;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
-        }
-        button:hover { background: #fde047; transform: scale(1.03); }
-        button:active { transform: scale(0.97); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ловец звёзд — Мини-игра</title>
+<style>
+*{box-sizing:border-box;user-select:none;-webkit-user-select:none}
+html,body{margin:0;padding:0;width:100%;height:100dvh;overflow:hidden;touch-action:none;background:#0f172a;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center}
+.header{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:400px;padding:12px 16px 8px;font-weight:600;font-size:1.05rem}
+.back-link{color:#94a3b8;text-decoration:none;font-size:.95rem}
+.canvas-wrap{position:relative;border-radius:16px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.5);border:2px solid #1e293b;max-width:92vw}
+canvas{display:block;width:100%;max-width:360px;max-height:62dvh;background:linear-gradient(180deg,#090d16 0%,#1e1b4b 100%)}
+.overlay{position:absolute;inset:0;background:rgba(15,23,42,.88);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:2}
+.hidden{display:none!important}
+h1{margin:0 0 8px;font-size:1.7rem;color:#facc15}
+p{margin:0 0 18px;color:#cbd5e1;font-size:.95rem;line-height:1.4}
+button{padding:13px 30px;font-size:1.05rem;font-weight:700;color:#0f172a;background:#facc15;border:none;border-radius:12px;cursor:pointer}
+.touch-pad{margin-top:14px;width:92vw;max-width:360px;height:68px;border-radius:14px;background:#1e293b;border:1px dashed #334155;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:.85rem;font-weight:500}
+</style>
 </head>
 <body>
+<div class="header">
+<a href="index.html" class="back-link">← На главную</a>
+<div>Счёт: <span id="score">0</span></div>
+<div>🏆 <span id="best">0</span></div>
+</div>
+<div class="canvas-wrap">
+<canvas id="game" width="360" height="500"></canvas>
+<div id="startScreen" class="overlay">
+<h1>⭐ Ловец звёзд</h1>
+<p>Води пальцем по панели снизу или в любом месте экрана.<br>Лови звёзды и уворачивайся от метеоритов!</p>
+<button id="startBtn">Играть</button>
+</div>
+<div id="gameOverScreen" class="overlay hidden">
+<h1 style="color:#f87171">💥 Игра окончена!</h1>
+<p id="finalScoreText">Ваш счёт: 0</p>
+<button id="restartBtn">Сыграть ещё</button>
+</div>
+</div>
+<div class="touch-pad">← Води пальцем здесь →</div>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),scoreEl=document.getElementById('score'),bestEl=document.getElementById('best'),startScreen=document.getElementById('startScreen'),gameOverScreen=document.getElementById('gameOverScreen'),finalScoreText=document.getElementById('finalScoreText');
+let best=Number(localStorage.getItem('starCatcherBest'))||0;bestEl.textContent=best;
+let score=0,playing=false,items=[],spawnAcc=0,rafId=null,lastTime=0;
+const keys={ArrowLeft:false,ArrowRight:false};
+const paddle={w:80,h:14,x:canvas.width/2-40,y:canvas.height-32,speed:420};
 
-    <div class="header">
-        <a href="index.html" class="back-link">← На главную</a>
-        <div>Счёт: <span id="score">0</span></div>
-        <div>🏆 <span id="best">0</span></div>
-    </div>
+function startGame(){
+    if(rafId)cancelAnimationFrame(rafId);
+    score=0;scoreEl.textContent=0;items=[];spawnAcc=0;
+    paddle.x=canvas.width/2-paddle.w/2;
+    playing=true;lastTime=performance.now();
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    rafId=requestAnimationFrame(loop);
+}
 
-    <div class="canvas-wrap">
-        <canvas id="game" width="380" height="540"></canvas>
-        
-        <div id="startScreen" class="overlay">
-            <h1>⭐ Ловец звёзд</h1>
-            <p>Двигай платформу мышкой, пальцем или стрелками.<br>Лови звёзды и уворачивайся от метеоритов!</p>
-            <button id="startBtn">Играть</button>
-        </div>
+function endGame(){
+    playing=false;
+    if(rafId){cancelAnimationFrame(rafId);rafId=null}
+    if(score>best){best=score;localStorage.setItem('starCatcherBest',best);bestEl.textContent=best}
+    finalScoreText.textContent='Ваш счёт: '+score;
+    gameOverScreen.classList.remove('hidden');
+}
 
-        <div id="gameOverScreen" class="overlay hidden">
-            <h1 style="color: #f87171;">💥 Игра окончена!</h1>
-            <p id="finalScoreText">Ваш счёт: 0</p>
-            <button id="restartBtn">Сыграть ещё</button>
-        </div>
-    </div>
+function spawnItem(){
+    const isMeteor=Math.random()<Math.min(0.25+score*0.005,0.55);
+    const size=isMeteor?28:26;
+    items.push({
+        x:Math.random()*(canvas.width-size),
+        y:-size,
+        size:size,
+        speed:180+Math.random()*110+score*3,
+        type:isMeteor?'meteor':'star'
+    });
+}
 
-    <script>
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const bestEl = document.getElementById('best');
-        const startScreen = document.getElementById('startScreen');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const finalScoreText = document.getElementById('finalScoreText');
-        const startBtn = document.getElementById('startBtn');
-        const restartBtn = document.getElementById('restartBtn');
+function update(dt){
+    if(keys.ArrowLeft)paddle.x-=paddle.speed*dt;
+    if(keys.ArrowRight)paddle.x+=paddle.speed*dt;
+    paddle.x=Math.max(0,Math.min(canvas.width-paddle.w,paddle.x));
 
-        let bestScore = Number(localStorage.getItem('starCatcherBest')) || 0;
-        bestEl.textContent = bestScore;
+    spawnAcc+=dt;
+    const interval=Math.max(0.35,0.8-score*0.012);
+    if(spawnAcc>=interval){spawnItem();spawnAcc=0}
 
-        let score = 0;
-        let isPlaying = false;
-        let items = [];
-        let spawnTimer = 0;
-        let keys = { ArrowLeft: false, ArrowRight: false };
-
-        const paddle = {
-            width: 80,
-            height: 14,
-            x: canvas.width / 2 - 40,
-            y: canvas.height - 55,
-            speed: 7
-        };
-
-        function startGame() {
-            score = 0;
-            scoreEl.textContent = score;
-            items = [];
-            spawnTimer = 0;
-            paddle.x = canvas.width / 2 - paddle.width / 2;
-            isPlaying = true;
-            startScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
-            requestAnimationFrame(gameLoop);
+    for(let i=items.length-1;i>=0;i--){
+        const it=items.at(i);
+        it.y+=it.speed*dt;
+        const hit=it.y+it.size>=paddle.y&&it.y<=paddle.y+paddle.h&&it.x+it.size>=paddle.x&&it.x<=paddle.x+paddle.w;
+        if(hit){
+            if(it.type==='meteor')return endGame();
+            score++;scoreEl.textContent=score;items.splice(i,1);continue;
         }
+        if(it.y>canvas.height)items.splice(i,1);
+    }
+}
 
-        function endGame() {
-            isPlaying = false;
-            if (score > bestScore) {
-                bestScore = score;
-                localStorage.setItem('starCatcherBest', bestScore);
-                bestEl.textContent = bestScore;
-            }
-            finalScoreText.textContent = `Ваш счёт: ${score}`;
-            gameOverScreen.classList.remove('hidden');
-        }
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#38bdf8';
+    ctx.beginPath();
+    ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,8);
+    ctx.fill();
+    ctx.font='24px sans-serif';
+    ctx.textBaseline='top';
+    for(const it of items)ctx.fillText(it.type==='meteor'?'☄️':'⭐',it.x,it.y);
+}
 
-        function spawnItem() {
-            const isMeteor = Math.random() < Math.min(0.25 + score * 0.005, 0.55);
-            const size = isMeteor ? 28 : 26;
-            items.push({
-                x: Math.random() * (canvas.width - size),
-                y: -size,
-                size: size,
-                speed: 3 + Math.random() * 2 + score * 0.05,
-                type: isMeteor ? 'meteor' : 'star'
-            });
-        }
+function loop(now){
+    if(!playing)return;
+    const dt=Math.min((now-lastTime)/1000,0.05);
+    lastTime=now;
+    update(dt);
+    if(playing){draw();rafId=requestAnimationFrame(loop)}
+}
 
-        function update() {
-            if (keys.ArrowLeft) paddle.x -= paddle.speed;
-            if (keys.ArrowRight) paddle.x += paddle.speed;
-            paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddle.x));
+function movePaddle(clientX){
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width;
+    const relX=(clientX-rect.left)*scaleX;
+    paddle.x=Math.max(0,Math.min(canvas.width-paddle.w,relX-paddle.w/2));
+}
 
-            spawnTimer++;
-            const spawnRate = Math.max(22, 48 - Math.floor(score / 2));
-            if (spawnTimer >= spawnRate) {
-                spawnItem();
-                spawnTimer = 0;
-            }
+window.addEventListener('keydown',e=>{if(e.key in keys)keys[e.key]=true});
+window.addEventListener('keyup',e=>{if(e.key in keys)keys[e.key]=false});
+window.addEventListener('mousemove',e=>{if(playing)movePaddle(e.clientX)});
+window.addEventListener('touchstart',e=>{
+    if(!playing)return;
+    const t=e.touches.item(0);
+    if(t)movePaddle(t.clientX);
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+    if(!playing)return;
+    const t=e.touches.item(0);
+    if(t)movePaddle(t.clientX);
+},{passive:true});
 
-            for (let i = items.length - 1; i >= 0; i--) {
-                const item = items[i];
-                item.y += item.speed;
-
-                const hitPaddle =
-                    item.y + item.size >= paddle.y &&
-                    item.y <= paddle.y + paddle.height &&
-                    item.x + item.size >= paddle.x &&
-                    item.x <= paddle.x + paddle.width;
-
-                if (hitPaddle) {
-                    if (item.type === 'meteor') {
-                        endGame();
-                        return;
-                    } else {
-                        score++;
-                        scoreEl.textContent = score;
-                        items.splice(i, 1);
-                        continue;
-                    }
-                }
-
-                if (item.y > canvas.height) {
-                    items.splice(i, 1);
-                }
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Платформа
-            ctx.fillStyle = '#38bdf8';
-            ctx.beginPath();
-            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
-            ctx.fill();
-
-            // Падающие объекты
-            ctx.font = '24px sans-serif';
-            ctx.textBaseline = 'top';
-            for (const item of items) {
-                ctx.fillText(item.type === 'meteor' ? '☄️' : '⭐', item.x, item.y);
-            }
-        }
-
-        function gameLoop() {
-            if (!isPlaying) return;
-            update();
-            draw();
-            if (isPlaying) requestAnimationFrame(gameLoop);
-        }
-
-        window.addEventListener('keydown', e => {
-            if (e.key in keys) keys[e.key] = true;
-        });
-        window.addEventListener('keyup', e => {
-            if (e.key in keys) keys[e.key] = false;
-        });
-
-        function movePaddleToClientX(clientX) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const relX = (clientX - rect.left) * scaleX;
-            paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, relX - paddle.width / 2));
-        }
-
-        canvas.addEventListener('mousemove', e => {
-            if (isPlaying) movePaddleToClientX(e.clientX);
-        });
-        canvas.addEventListener('touchmove', e => {
-            if (isPlaying && e.touches.length > 0) {
-                e.preventDefault();
-                movePaddleToClientX(e.touches[0].clientX);
-            }
-        }, { passive: false });
-
-        startBtn.addEventListener('click', startGame);
-        restartBtn.addEventListener('click', startGame);
-    </script>
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('restartBtn').addEventListener('click',startGame);
+</script>
 </body>
 </html>
-
