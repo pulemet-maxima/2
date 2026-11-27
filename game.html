@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ловец звёзд — Мини-игра</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .back-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #fff; }
+        .canvas-wrap {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid #1e293b;
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(180deg, #090d16 0%, #1e1b4b 100%);
+            touch-action: none;
+        }
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .hidden { display: none; }
+        h1 { margin: 0 0 8px; font-size: 1.8rem; color: #facc15; }
+        p { margin: 0 0 20px; color: #cbd5e1; line-height: 1.4; }
+        button {
+            padding: 14px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f172a;
+            background: #facc15;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+        button:hover { background: #fde047; transform: scale(1.03); }
+        button:active { transform: scale(0.97); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" class="back-link">← На главную</a>
+        <div>Счёт: <span id="score">0</span></div>
+        <div>🏆 <span id="best">0</span></div>
+    </div>
+
+    <div class="canvas-wrap">
+        <canvas id="game" width="380" height="540"></canvas>
+        
+        <div id="startScreen" class="overlay">
+            <h1>⭐ Ловец звёзд</h1>
+            <p>Двигай платформу мышкой, пальцем или стрелками.<br>Лови звёзды и уворачивайся от метеоритов!</p>
+            <button id="startBtn">Играть</button>
+        </div>
+
+        <div id="gameOverScreen" class="overlay hidden">
+            <h1 style="color: #f87171;">💥 Игра окончена!</h1>
+            <p id="finalScoreText">Ваш счёт: 0</p>
+            <button id="restartBtn">Сыграть ещё</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreText = document.getElementById('finalScoreText');
+
+        let bestScore = localStorage.getItem('starCatcherBest') || 0;
+        bestEl.textContent = bestScore;
+
+        let score = 0;
+        let isPlaying = false;
