@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Главная — Мини-проект</title>
+    <title>Игра — Мини-проекты</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -42,7 +42,7 @@
         }
         h1 {
             margin: 0 0 0.6rem;
-            font-size: 1.55rem;
+            font-size: 1.75rem;
             font-weight: 700;
             letter-spacing: -0.01em;
         }
@@ -62,8 +62,8 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 0.75rem 1rem;
-            font-size: 0.92rem;
+            padding: 0.85rem 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             border-radius: 10px;
             cursor: pointer;
@@ -89,6 +89,9 @@
             background: #fde047;
             border-color: #fde047;
         }
+        .btn.full {
+            grid-column: span 2;
+        }
         .btn.soon {
             color: #94a3b8;
             border-style: dashed;
@@ -102,7 +105,7 @@
             font-weight: 600;
         }
         #status {
-            margin-top: 1.25rem;
+            margin-top: 1.15rem;
             min-height: 1.3em;
             font-size: 0.88rem;
             color: #38bdf8;
@@ -112,33 +115,26 @@
 </head>
 <body>
     <div class="card">
-        <div class="badge">GitHub Pages</div>
-        <h1>Сайт успешно запущен</h1>
-        <p>Минималистичная стартовая страница вашего репозитория. Выберите нужный раздел.</p>
+        <div class="badge">Мини-игры</div>
+        <h1>Игра</h1>
+        <p>Выберите мини-игру для запуска.</p>
         
         <div class="actions">
-            <a href="game.html" class="btn btn-primary">⭐ Играть</a>
-            <button id="btn" class="btn">Интерактив</button>
-            <a href="page2.html" class="btn soon">Раздел 2 <span class="tag">Скоро</span></a>
-            <a href="page3.html" class="btn soon">Раздел 3 <span class="tag">Скоро</span></a>
+            <a href="game.html" class="btn btn-primary">⭐ Ловец звёзд</a>
+            <a href="page2.html" class="btn">🐍 Змейка</a>
+            <a href="page3.html" class="btn full soon">Раздел 3 <span class="tag">Скоро</span></a>
         </div>
         
         <div id="status"></div>
     </div>
 
     <script>
-        let clicks = 0;
         const statusEl = document.getElementById('status');
-
-        document.getElementById('btn').addEventListener('click', () => {
-            clicks++;
-            statusEl.textContent = `Счётчик нажатий: ${clicks}`;
-        });
 
         document.querySelectorAll('.btn.soon').forEach(link => {
             link.addEventListener('click', e => {
                 e.preventDefault();
-                const title = link.childNodes[0].textContent.trim();
+                const title = link.childNodes.textContent.trim();
                 statusEl.textContent = `«${title}» пока в разработке`;
             });
         });
