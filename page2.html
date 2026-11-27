@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Неоновая Змейка — Мини-игра</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 12px;
+            padding-bottom: 24px;
+            min-height: 100dvh;
+            overflow: hidden;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 380px;
+            padding: 8px 16px 12px;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        .back-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #fff; }
+        .canvas-wrap {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid #1e293b;
+            max-width: 92vw;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 360px;
+            aspect-ratio: 1 / 1;
+            background: #090d16;
+            touch-action: none;
+        }
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .hidden { display: none !important; }
+        h1 { margin: 0 0 8px; font-size: 1.65rem; color: #38bdf8; }
+        p { margin: 0 0 18px; color: #cbd5e1; font-size: 0.95rem; line-height: 1.4; }
+        .start-btn {
+            padding: 13px 30px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            background: #38bdf8;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .start-btn:hover { background: #7dd3fc; transform: scale(1.03); }
+        .start-btn:active { transform: scale(0.97); }
+
+        /* Кнопки управления для телефона */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 62px);
+            grid-template-rows: repeat(2, 54px);
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .ctrl-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .ctrl-btn:active {
+            background: #334155;
+            transform: scale(0.95);
+        }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" class="back-link">← На главную</a>
+        <div>Счёт: <span id="score">0</span></div>
+        <div>🏆 <span id="best">0</span></div>
+    </div>
+
+    <div class="canvas-wrap">
+        <canvas id="game" width="360" height="360"></canvas>
+        
+        <div id="startScreen" class="overlay">
+            <h1>🐍 Змейка</h1>
+            <p>Собирай кристаллы и не врезайся в стены или хвост.<br>Управляй свайпами, стрелками или кнопками ниже.</p>
+            <button id="startBtn" class="start-btn">Играть</button>
+        </div>
+
+        <div id="gameOverScreen" class="overlay hidden">
+            <h1 style="color: #f87171;">💥 Игра окончена!</h1>
+            <p id="finalScoreText">Ваш счёт: 0</p>
+            <button id="restartBtn" class="start-btn">Сыграть ещё</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="ctrl-btn up" data-dir="UP">▲</button>
+        <button class="ctrl-btn left" data-dir="LEFT">◀</button>
+        <button class="ctrl-btn down" data-dir="DOWN">▼</button>
+        <button class="ctrl-btn right" data-dir="RIGHT">▶</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreText = document.getElementById('finalScoreText');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        const gridSize = 18;
+        const tileCount = canvas.width / gridSize;
+
+        let bestScore = Number(localStorage.getItem('snakeBest')) || 0;
+        bestEl.textContent = bestScore;
+
+        let snake = [];
+        let food = { x: 10, y: 10 };
+        let dx = 0;
+        let dy = 0;
+        let nextDx = 0;
+        let nextDy = 0;
+        let score = 0;
+        let isPlaying = false;
+        let gameTimeout = null;
+
+        function startGame() {
+            snake = [
+                { x: 10, y: 10 },
+                { x: 9, y: 10 },
+                { x: 8, y: 10 }
+            ];
+            dx = 1;
+            dy = 0;
+            nextDx = 1;
+            nextDy = 0;
+            score = 0;
+            scoreEl.textContent = score;
+            isPlaying = true;
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            spawnFood();
+            clearTimeout(gameTimeout);
+            loop();
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearTimeout(gameTimeout);
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('snakeBest', bestScore);
+                bestEl.textContent = bestScore;
+            }
+            finalScoreText.textContent = `Ваш счёт: ${score}`;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function spawnFood() {
+            while (true) {
+                const x = Math.floor(Math.random() * tileCount);
+                const y = Math.floor(Math.random() * tileCount);
+                const onSnake = snake.some(seg => seg.x === x && seg.y === y);
+                if (!onSnake) {
+                    food = { x, y };
+                    break;
+                }
+            }
+        }
+
+        function setDirection(dir) {
+            if (!isPlaying) return;
+            if (dir === 'UP' && dy === 0) { nextDx = 0; nextDy = -1; }
+            if (dir === 'DOWN' && dy === 0) { nextDx = 0; nextDy = 1; }
+            if (dir === 'LEFT' && dx === 0) { nextDx = -1; nextDy = 0; }
+            if (dir === 'RIGHT' && dx === 0) { nextDx = 1; nextDy = 0; }
+        }
+
+        function update() {
+            dx = nextDx;
+            dy = nextDy;
+
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // Проверка стен
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                endGame();
+                return;
+            }
+
+            // Проверка столкновения с собой
+            if (snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+                endGame();
+                return;
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreEl.textContent = score;
+                spawnFood();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Еда (кристалл)
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.arc(
+                food.x * gridSize + gridSize / 2,
+                food.y * gridSize + gridSize / 2,
+                gridSize / 2.6,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+
+            // Змейка
+            snake.forEach((seg, index) => {
+                ctx.fillStyle = index === 0 ? '#38bdf8' : '#0284c7';
+                ctx.beginPath();
+                ctx.roundRect(
+                    seg.x * gridSize + 1,
+                    seg.y * gridSize + 1,
+                    gridSize - 2,
+                    gridSize - 2,
+                    5
+                );
+                ctx.fill();
+            });
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+            update();
+            if (isPlaying) {
+                draw();
+                const speed = Math.max(65, 130 - score * 2);
+                gameTimeout = setTimeout(loop, speed);
+            }
+        }
+
+        // Клавиатура
+        window.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w') setDirection('UP');
+            if (e.key === 'ArrowDown' || e.key === 's') setDirection('DOWN');
+            if (e.key === 'ArrowLeft' || e.key === 'a') setDirection('LEFT');
+            if (e.key === 'ArrowRight' || e.key === 'd') setDirection('RIGHT');
+        });
+
